@@ -69,6 +69,9 @@ class GameEngine:
         self.track_img = pygame.image.load(os.path.join(assets_dir, 'track.png')).convert()
         self.track_img = pygame.transform.scale(self.track_img, (self.width, self.height))
 
+        # Sensitivity persists across game restarts
+        self.sensitivity = 1.2   # range 0.3 – 2.5
+
         self._reset_state()
 
     # ------------------------------------------------------------------
@@ -104,6 +107,12 @@ class GameEngine:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r and self.game_over:
                     self._reset_state()
+                # + / = key  →  increase sensitivity
+                if event.key in (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS):
+                    self.sensitivity = round(min(2.5, self.sensitivity + 0.1), 1)
+                # - key  →  decrease sensitivity
+                if event.key in (pygame.K_MINUS, pygame.K_KP_MINUS):
+                    self.sensitivity = round(max(0.3, self.sensitivity - 0.1), 1)
 
         if self.game_over:
             return True   # keep window open, show game-over screen
@@ -192,18 +201,57 @@ class GameEngine:
 
     # ------------------------------------------------------------------
     def _draw_hud(self, hands_detected):
-        # Score (top-left)
+        # ── Score (top-left) ──────────────────────────────────────────────
         score_surf = self.font_large.render(f"Score: {self.score}", True, (255, 255, 255))
         shadow     = self.font_large.render(f"Score: {self.score}", True, (0, 0, 0))
         self.screen.blit(shadow,     (12, 12))
         self.screen.blit(score_surf, (10, 10))
 
-        # "No hands" warning
+        # ── Sensitivity slider (top-right) ────────────────────────────────
+        SLIDER_W  = 120
+        SLIDER_H  = 10
+        SLIDER_X  = self.width - SLIDER_W - 14
+        SLIDER_Y  = 14
+        LABEL_COL = (220, 220, 220)
+        FILL_COL  = (80, 200, 120)    # green fill
+        BG_COL    = (50, 50, 50)
+
+        # Label
+        lbl = self.font_small.render(
+            f"Sensitivity  {self.sensitivity:.1f}", True, LABEL_COL)
+        lbl_shadow = self.font_small.render(
+            f"Sensitivity  {self.sensitivity:.1f}", True, (0, 0, 0))
+        lbl_x = self.width - lbl.get_width() - 14
+        self.screen.blit(lbl_shadow, (lbl_x + 1, SLIDER_Y + 1))
+        self.screen.blit(lbl,        (lbl_x,     SLIDER_Y))
+
+        # Track
+        bar_y = SLIDER_Y + lbl.get_height() + 4
+        pygame.draw.rect(self.screen, BG_COL,
+                         (SLIDER_X, bar_y, SLIDER_W, SLIDER_H), border_radius=5)
+
+        # Fill (map 0.3–2.5 → 0–SLIDER_W)
+        fill_ratio = (self.sensitivity - 0.3) / (2.5 - 0.3)
+        fill_w = max(6, int(SLIDER_W * fill_ratio))
+        pygame.draw.rect(self.screen, FILL_COL,
+                         (SLIDER_X, bar_y, fill_w, SLIDER_H), border_radius=5)
+
+        # Thumb dot
+        thumb_x = SLIDER_X + fill_w
+        pygame.draw.circle(self.screen, (255, 255, 255), (thumb_x, bar_y + SLIDER_H // 2), 7)
+        pygame.draw.circle(self.screen, FILL_COL,       (thumb_x, bar_y + SLIDER_H // 2), 5)
+
+        # Hint
+        hint = self.font_small.render("[ -  /  + ]", True, (160, 160, 160))
+        self.screen.blit(hint, (self.width - hint.get_width() - 14,
+                                bar_y + SLIDER_H + 6))
+
+        # ── No-connection warning ─────────────────────────────────────────
         if not hands_detected:
-            warn = self.font_small.render("Show BOTH hands to steer!", True, (255, 60, 60))
+            warn = self.font_small.render("Phone not connected!", True, (255, 60, 60))
             pygame.draw.rect(self.screen, (0, 0, 0),
                              (self.width//2 - warn.get_width()//2 - 6, 44,
-                              warn.get_width() + 12, warn.get_height() + 6), border_radius=6)
+                               warn.get_width() + 12, warn.get_height() + 6), border_radius=6)
             self.screen.blit(warn, (self.width//2 - warn.get_width()//2, 47))
 
     # ------------------------------------------------------------------

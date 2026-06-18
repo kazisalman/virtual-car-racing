@@ -89,9 +89,11 @@ class PhoneTracker:
             if len(values) < 3:
                 return
 
-            # values = [x, y, z]  in m/s²
-            # X-axis: positive = tilted right, negative = tilted left
-            accel_x = values[0]
+            # Phone held flat, screen up, charging port LEFT, IR blaster RIGHT
+            # → phone's Y axis points RIGHT.
+            # Tilt left  (charging port dips) → accel Y positive → steer left (negate)
+            # Tilt right (IR blaster dips)    → accel Y negative → steer right (negate)
+            accel_x = values[1]
 
             # Map ±9.8 m/s² → ±90°  then apply sensitivity
             angle = accel_x * (90.0 / 9.8) * self.SENSITIVITY

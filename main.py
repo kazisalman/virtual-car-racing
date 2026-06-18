@@ -88,6 +88,8 @@ def main():
 
         else:   # phone
             steering_angle, connected = phone.get_steering()
+            # Keep phone tracker sensitivity in sync with the HUD slider
+            phone.SENSITIVITY = engine.sensitivity
 
         # ── Update & render ──────────────────────────────────────────────
         running = engine.update(steering_angle)
